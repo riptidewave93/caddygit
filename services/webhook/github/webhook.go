@@ -3,9 +3,11 @@ package github
 import (
 	"crypto/hmac"
 	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 
@@ -45,6 +47,7 @@ func (Webhook) CaddyModule() caddy.ModuleInfo {
 // Handle implements the webhook.Webhook interface.
 func (Webhook) Handle(req *http.Request, hc *webhook.HookConf) (int, error) {
 	if err := webhook.ValidateRequest(req); err != nil {
+		_, _ = io.Copy(ioutil.Discard, req.Body)
 		return http.StatusBadRequest, err
 	}
 
@@ -53,27 +56,33 @@ func (Webhook) Handle(req *http.Request, hc *webhook.HookConf) (int, error) {
 		return http.StatusRequestTimeout, err
 	}
 
-	signature := req.Header.Get("X-Hub-Signature")
-	if signature != "" {
-		if hc.Secret == "" {
-			return http.StatusBadRequest, fmt.Errorf("empty webhook secret")
+	// ensure both the webhook and GitHub agree on the use of a secret
+	sig1 := req.Header.Get("X-Hub-Signature")
+	sig256 := req.Header.Get("X-Hub-Signature-256")
+	if hc.Secret == "" && (sig1 != "" || sig256 != "") {
+		return http.StatusInternalServerError, fmt.Errorf("empty webhook secret")
+	} else if hc.Secret != "" && sig1 == "" && sig256 == "" {
+		return http.StatusBadRequest, fmt.Errorf("empty GitHub secret")
+	}
+
+	if hc.Secret != "" {
+		var authorized bool
+		if sig256 != "" {
+			mac := hmac.New(sha256.New, []byte(hc.Secret))
+			mac.Write(body)
+			authorized = sig256[5:] == hex.EncodeToString(mac.Sum(nil))
 		}
-
-		mac := hmac.New(sha1.New, []byte(hc.Secret))
-		mac.Write(body)
-		expectedMac := hex.EncodeToString(mac.Sum(nil))
-
-		if signature[5:] != expectedMac {
-			return http.StatusBadRequest, fmt.Errorf("inavlid signature")
+		if !authorized && sig1 != "" {
+			mac := hmac.New(sha1.New, []byte(hc.Secret))
+			mac.Write(body)
+			authorized = sig1[5:] == hex.EncodeToString(mac.Sum(nil))
+		}
+		if !authorized {
+			return http.StatusForbidden, fmt.Errorf("invalid signature")
 		}
 	}
 
-	event := req.Header.Get("X-Github-Event")
-	if event == "" {
-		return http.StatusBadRequest, fmt.Errorf("header 'X-Github-Event' missing")
-	}
-
-	switch event {
+	switch event := req.Header.Get("X-Github-Event"); event {
 	case "ping":
 	case "push":
 		var rBody pushBody
@@ -114,6 +123,8 @@ func (Webhook) Handle(req *http.Request, hc *webhook.HookConf) (int, error) {
 			// in both the cases, a release shouldn't change the tree.
 			return http.StatusBadRequest, fmt.Errorf("repo not latest tag")
 		}
+	case "":
+		return http.StatusBadRequest, fmt.Errorf("header 'X-Github-Event' missing")
 	default:
 		return http.StatusBadRequest, fmt.Errorf("cannot handle %q event", event)
 	}
