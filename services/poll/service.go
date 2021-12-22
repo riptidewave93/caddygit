@@ -8,7 +8,7 @@ import (
 
 	"github.com/caddyserver/caddy/v2"
 
-	"github.com/vrongmeal/caddygit"
+	"github.com/riptidewave93/caddygit"
 )
 
 func init() {

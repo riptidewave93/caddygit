@@ -12,9 +12,9 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 
-	"github.com/vrongmeal/caddygit"
-	"github.com/vrongmeal/caddygit/module"
-	"github.com/vrongmeal/caddygit/services/webhook"
+	"github.com/riptidewave93/caddygit"
+	"github.com/riptidewave93/caddygit/module"
+	"github.com/riptidewave93/caddygit/services/webhook"
 )
 
 func init() {

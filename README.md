@@ -1,5 +1,7 @@
 # caddygit
 
+### Note that this is a fork-of-a-fork that is only modified to allow import during docker build. This code IS NOT OWNED OR MANAGED by me in any way, shape, or form. Please refer to the source repos.
+
 > Git module for Caddy v2
 
 The module is helpful in creating git clients that pull from the given
@@ -21,7 +23,7 @@ import (
 
 	// plug in Caddy modules here
 	_ "github.com/caddyserver/caddy/v2/modules/standard"
-	_ "github.com/vrongmeal/caddygit/module/git" // Yay!!!
+	_ "github.com/riptidewave93/caddygit/module/git" // Yay!!!
 )
 
 func main() {
@@ -33,7 +35,7 @@ func main() {
 
 ```bash
 $ xcaddy build v2.1.1 \
-    --with github.com/vrongmeal/caddygit/module/git
+    --with github.com/riptidewave93/caddygit/module/git
 ```
 
 ## API structure
@@ -51,7 +53,7 @@ $ xcaddy build v2.1.1 \
                     // Git repository info.
                     "repo": {
                         // HTTP URL of the git repository.
-                        "url": "http://github.com/vrongmeal/caddygit",
+                        "url": "http://github.com/riptidewave93/caddygit",
 
                         // Path to clone the repository in. If path specified
                         // exists and is a git repository, it simply opens the
